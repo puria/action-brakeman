@@ -6,8 +6,17 @@ version() {
   fi
 }
 
-cd "$GITHUB_WORKSPACE"
-export REVIEWDOG_GITHUB_API_TOKEN="${INPUT_GITHUB_TOKEN}"
+cd "${GITHUB_WORKSPACE}" || exit
+
+TEMP_PATH="$(mktemp -d)"
+PATH="${TEMP_PATH}:$PATH"
+
+echo '::group::🐶 Installing reviewdog ... https://github.com/reviewdog/reviewdog'
+curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh | sh -s -- -b "${TEMP_PATH}" "${REVIEWDOG_VERSION}" 2>&1
+echo '::endgroup::'
+
+echo '::group:: Installing brakeman... https://github.com/presidentbeef/brakeman'
+
 
 # if 'gemfile' brakeman version selected
 if [[ "$INPUT_BRAKEMAN_VERSION" = "gemfile" ]]; then
@@ -31,8 +40,13 @@ if [[ "$INPUT_BRAKEMAN_VERSION" = "gemfile" ]]; then
     BRAKEMAN_VERSION=$INPUT_BRAKEMAN_VERSION
 fi
 
+# shellcheck disable=SC2046,SC2086
 gem install -N brakeman $(version $BRAKEMAN_VERSION)
+echo '::endgroup::'
 
+export REVIEWDOG_GITHUB_API_TOKEN="${INPUT_GITHUB_TOKEN}"
+
+echo '::group:: Running brakeman with reviewdog 🐶 ...'
 brakeman --quiet --format tabs ${INPUT_BRAKEMAN_FLAGS} \
   | reviewdog -f=brakeman \
     -name="${INPUT_TOOL_NAME}" \
@@ -41,6 +55,9 @@ brakeman --quiet --format tabs ${INPUT_BRAKEMAN_FLAGS} \
     -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
     -level="${INPUT_LEVEL}" \
     ${INPUT_REVIEWDOG_FLAGS}
-exit_code=$?
 
-exit $exit_code
+reviewdog_rc=$?
+
+echo '::endgroup::'
+
+exit $reviewdog_rc
