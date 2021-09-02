@@ -10,7 +10,7 @@ cd "$GITHUB_WORKSPACE"
 export REVIEWDOG_GITHUB_API_TOKEN="${INPUT_GITHUB_TOKEN}"
 
 # if 'gemfile' brakeman version selected
-if [[ $INPUT_BRAKEMAN_VERSION = "gemfile" ]]; then
+if [[ "$INPUT_BRAKEMAN_VERSION" = "gemfile" ]]; then
   # if Gemfile.lock is here
   if [[ -f 'Gemfile.lock' ]]; then
     # grep for brakeman version
